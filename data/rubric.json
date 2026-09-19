@@ -1,0 +1,32 @@
+{
+  "problem_id": "second_largest",
+  "title": "Second Largest Distinct Number",
+  "description": "Write a function second_largest(a) that takes a list of integers and returns the second-largest distinct number in the list. If there is no such number (e.g. list has fewer than 2 distinct elements), return the string 'invalid input'.",
+  "test_cases": [
+    {
+      "name": "case_1_distinct",
+      "input": "[5, 1, 9, 3]",
+      "expected": "5"
+    },
+    {
+      "name": "case_2_duplicates",
+      "input": "[5, 5, 2]",
+      "expected": "2"
+    },
+    {
+      "name": "case_3_single_element",
+      "input": "[7]",
+      "expected": "\"invalid input\""
+    }
+  ],
+  "diagnostic_probes": {
+    "case_2_duplicates": {
+      "question": "For [5, 5, 2], your code returns 5 (or fails). What does sorting and selecting an index (like a[-2]) do when duplicates are present, and why is that not necessarily the second-largest distinct value?",
+      "keywords": ["duplicate", "set", "unique", "distinct", "same", "remove"]
+    },
+    "case_3_single_element": {
+      "question": "For [7], your code fails or returns an incorrect value. How should your code handle lists with fewer than 2 distinct elements, and what does the rubric require in that case?",
+      "keywords": ["invalid", "fewer", "length", "less", "single", "one", "element"]
+    }
+  }
+}

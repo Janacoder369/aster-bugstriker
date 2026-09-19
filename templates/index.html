@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BugStriker // Adaptive Debugging & Verification</title>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-base: #0f111a;
+            --bg-surface: #141824;
+            --bg-element: #1e2438;
+            --bg-element-light: #28304a;
+            --border-color: #2b354f;
+            --text-primary: #f0f3f9;
+            --text-secondary: #9aa5ce;
+            --text-muted: #565f89;
+            
+            --brand-primary: #787cff;
+            --brand-glow: rgba(120, 124, 255, 0.15);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.15);
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.15);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.15);
+            
+            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.5;
+            overflow-x: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar styling for history */
+        .sidebar {
+            width: 280px;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--text-primary);
+        }
+
+        .brand-logo span {
+            color: var(--brand-primary);
+        }
+
+        .brand-badge {
+            background-color: rgba(120, 124, 255, 0.15);
+            border: 1px solid rgba(120, 124, 255, 0.3);
+            color: var(--brand-primary);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 12px;
+        }
+
+        .history-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            padding-left: 8px;
+        }
+
+        .history-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 12px;
+            border-radius: var(--radius-md);
+            background-color: transparent;
+            border: 1px solid transparent;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: var(--transition);
+        }
+
+        .history-item:hover {
+            background-color: var(--bg-element);
+            border-color: var(--border-color);
+        }
+
+        .history-item.active {
+            background-color: rgba(120, 124, 255, 0.08);
+            border-color: var(--brand-primary);
+        }
+
+        .history-item .student {
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item .meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+
+        .status-badge.verified {
+            background-color: var(--success-glow);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-badge.waiting {
+            background-color: var(--warning-glow);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .status-badge.finished {
+            background-color: var(--text-muted);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .btn-reset {
+            width: 100%;
+            background-color: transparent;
+            border: 1px dashed var(--border-color);
+            color: var(--text-secondary);
+            padding: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .btn-reset:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background-color: var(--danger-glow);
+        }
+
+        /* Main Workspace */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: var(--bg-base);
+        }
+
+        .top-navbar {
+            height: 70px;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+        }
+
+        .student-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .student-input-container {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-element);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 4px 12px;
+        }
+
+        .student-input-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .student-input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 600;
+            outline: none;
+            width: 120px;
+        }
+
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            overflow: hidden;
+        }
+
+        /* Left side: Problem Description */
+        .problem-pane {
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .problem-header {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .problem-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+
+        .problem-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            background-color: rgba(30, 36, 56, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+        }
+
+        .test-cases-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .test-case-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .test-case-row {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .test-case-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            width: 90px;
+        }
+
+        .test-case-value {
+            font-family: var(--font-mono);
+            color: var(--text-primary);
+            background-color: var(--bg-base);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Right side: Interactive Loop Workspace */
+        .workspace-pane {
+            overflow-y: auto;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            background-color: rgba(15, 17, 26, 0.95);
+        }
+
+        /* Code Editor Style */
+        .editor-wrapper {
+            background-color: #0c0e15;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .editor-header {
+            background-color: #121520;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .editor-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .editor-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .editor-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .editor-dot.red { background-color: #ff5f56; }
+        .editor-dot.yellow { background-color: #ffbd2e; }
+        .editor-dot.green { background-color: #27c93f; }
+
+        .editor-body {
+            position: relative;
+            display: flex;
+        }
+
+        .line-numbers {
+            width: 48px;
+            padding: 16px 0;
+            text-align: right;
+            padding-right: 12px;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            border-right: 1px solid rgba(43, 53, 79, 0.5);
+            background-color: #0a0c12;
+            user-select: none;
+        }
+
+        .code-textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            resize: none;
+            padding: 16px;
+            color: #e2e8f0;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            tab-size: 4;
+            min-height: 240px;
+        }
+
+        .btn-submit {
+            background-color: var(--brand-primary);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px var(--brand-glow);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            background-color: #6366f1;
+            box-shadow: 0 6px 20px rgba(120, 124, 255, 0.3);
+        }
+
+        .btn-submit:disabled {
+            background-color: var(--border-color);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Run State Loading Box */
+        .loading-box {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(120, 124, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--brand-primary);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .loading-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Test Result Table in Workspace */
+        .test-results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .test-result-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 14px 20px;
+        }
+
+        .test-result-row.failed {
+            border-left: 4px solid var(--danger);
+        }
+
+        .test-result-row.passed {
+            border-left: 4px solid var(--success);
+        }
+
+        .test-result-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .result-pill {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .result-pill.pass {
+            background-color: var(--success-glow);
+            color: var(--success);
+        }
+
+        .result-pill.fail {
+            background-color: var(--danger-glow);
+            color: var(--danger);
+        }
+
+        .test-result-details {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Question Box (Agent Prompting) */
+        .probe-card {
+            background-color: rgba(120, 124, 255, 0.05);
+            border: 1px solid var(--brand-primary);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 4px 20px rgba(120, 124, 255, 0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .probe-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background-color: var(--brand-primary);
+        }
+
+        .probe-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .agent-avatar {
+            width: 32px;
+            height: 32px;
+            background-color: var(--brand-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: white;
+            box-shadow: 0 0 10px rgba(120, 124, 255, 0.4);
+        }
+
+        .agent-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--brand-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .probe-question {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .explanation-textarea {
+            width: 100%;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            resize: vertical;
+            min-height: 100px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .explanation-textarea:focus {
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 10px var(--brand-glow);
+        }
+
+        /* Final verdict scorecard */
+        .verdict-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .verdict-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        .verdict-status-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .verdict-badge {
+            font-weight: 800;
+            font-size: 1.2rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .verdict-badge.verified { color: var(--success); }
+        .verdict-badge.failed { color: var(--danger); }
+        .verdict-badge.warning { color: var(--warning); }
+
+        .verdict-confidence {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .verdict-confidence span {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .verdict-score {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .verdict-score span {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .verdict-details {
+            background-color: var(--bg-base);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* Compare diff code container */
+        .diff-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .diff-pane {
+            background-color: #0c0e15;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+
+        .diff-header {
+            background-color: #121520;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .diff-code {
+            padding: 16px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre;
+            color: #e2e8f0;
+        }
+
+        /* SVG icon styles */
+        .icon {
+            width: 18px;
+            height: 18px;
+            stroke-width: 2;
+            stroke: currentColor;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* View switcher / main states layout */
+        .state-view {
+            display: none;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .state-view.active {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar for run history -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-logo">
+                <svg class="icon" style="color: var(--brand-primary); width: 22px; height: 22px;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                Bug<span>Striker</span>
+            </div>
+            <div class="brand-badge">V1.0</div>
+        </div>
+        <div class="history-list">
+            <div class="history-title">Evaluation Runs</div>
+            <div id="runs-container">
+                <!-- Stored historical runs go here -->
+                <div class="history-item" style="cursor: default; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color);">
+                    No evaluation history
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            <button class="btn-reset" onclick="resetAllHistory()">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Clear All Sessions
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="workspace">
+        <!-- Top Navbar -->
+        <div class="top-navbar">
+            <div class="student-profile">
+                <div class="student-input-container">
+                    <div class="student-input-label">Student ID:</div>
+                    <input type="text" id="student-id" class="student-input" value="Arun" onchange="updateStudentID(this.value)">
+                </div>
+            </div>
+            
+            <div id="session-status" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary);">
+                <span class="editor-dot yellow" style="width: 8px; height: 8px;"></span>
+                Session: <strong style="color: var(--text-primary);" id="session-display-id">None</strong>
+            </div>
+        </div>
+
+        <div class="main-container">
+            <!-- Left Panel: Problem Definition -->
+            <div class="problem-pane">
+                <div class="problem-header">
+                    <div id="problem-title" class="problem-title">Loading Problem...</div>
+                    <div id="problem-description" class="problem-description">
+                        Retrieving task rubric definitions...
+                    </div>
+                </div>
+                
+                <div class="test-cases-section">
+                    <div class="section-title">Deterministic Test Cases</div>
+                    <div id="test-cases-container" class="test-cases-section">
+                        <!-- Test cases will load here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Interactive Step Workspace -->
+            <div class="workspace-pane">
+                
+                <!-- VIEW 1: SUBMIT SOLUTION (State: SUBMITTED) -->
+                <div id="view-submit" class="state-view active">
+                    <div class="section-title">Step 1 — Submit Flawed Code</div>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: -10px;">
+                        Submit your initial solution. BugStriker will run safety-checked sandbox tests and analyze execution failures.
+                    </p>
+                    
+                    <div class="editor-wrapper">
+                        <div class="editor-header">
+                            <div class="editor-title">
+                                <svg class="icon" viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6L2 12l6 6"/></svg>
+                                solution.py
+                            </div>
+                            <div class="editor-dots">
+                                <div class="editor-dot red"></div>
+                                <div class="editor-dot yellow"></div>
+                                <div class="editor-dot green"></div>
+                            </div>
+                        </div>
+                        <div class="editor-body">
+                            <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9</div>
+                            <textarea id="code-submit" class="code-textarea" spellcheck="false">def second_largest(a):
+    a.sort()
+    return a[-2]</textarea>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-submit" id="btn-submit-code" onclick="submitInitialCode()">
+                        <svg class="icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Execute & Analyze Code
+                    </button>
+                </div>
+
+                <!-- VIEW 2: LOADING TRANSITION STATE -->
+                <div id="view-loading" class="state-view">
+                    <div class="loading-box">
+                        <div class="spinner"></div>
+                        <div id="loading-title" class="loading-title">Executing Sandbox Environment...</div>
+                        <div id="loading-subtitle" class="loading-subtitle">Compiling abstract syntax and running test harness on thread sandbox.</div>
+                    </div>
+                </div>
+
+                <!-- VIEW 3: PROBE QUESTION & REVISE (State: WAITING_FOR_STUDENT) -->
+                <div id="view-probe" class="state-view">
+                    <div class="section-title">Step 2 — Diagnostic Inquiry & Code Revision</div>
+                    
+                    <!-- Sandbox Test Results -->
+                    <div class="test-results-container">
+                        <div class="section-title" style="margin-bottom: 4px;">Initial Sandbox Results</div>
+                        <div id="original-results-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Test result rows -->
+                        </div>
+                    </div>
+
+                    <!-- Targeted Diagnostic Question -->
+                    <div class="probe-card">
+                        <div class="probe-header">
+                            <div class="agent-avatar">🤖</div>
+                            <div class="agent-name">BugStriker Agent Probing</div>
+                        </div>
+                        <div id="probe-question-text" class="probe-question">
+                            Targeted question goes here...
+                        </div>
+                    </div>
+
+                    <!-- Student Answer Explanation -->
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <label class="section-title" for="student-explanation">Your Diagnostic Explanation</label>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">
+                            Explain exactly what is causing the targeted failure, and how to fix it conceptually.
+                        </p>
+                        <textarea id="student-explanation" class="explanation-textarea" placeholder="Explain the root cause of the bug in your own words (e.g. 'Duplicates are not handled when sorting and selecting by index...')"></textarea>
+                    </div>
+
+                    <!-- Revised Code Editor -->
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <label class="section-title">Your Code Revision</label>
+                        <div class="editor-wrapper">
+                            <div class="editor-header">
+                                <div class="editor-title">
+                                    <svg class="icon" viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6L2 12l6 6"/></svg>
+                                    solution_revised.py
+                                </div>
+                                <div class="editor-dots">
+                                    <div class="editor-dot red"></div>
+                                    <div class="editor-dot yellow"></div>
+                                    <div class="editor-dot green"></div>
+                                </div>
+                            </div>
+                            <div class="editor-body">
+                                <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10</div>
+                                <textarea id="code-revised" class="code-textarea" spellcheck="false"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn-submit" id="btn-submit-revision" onclick="submitRevision()">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        Submit Explanation & Revised Code
+                    </button>
+                </div>
+
+                <!-- VIEW 4: FINAL EVALUATION SCREEN (State: FINISHED) -->
+                <div id="view-finished" class="state-view">
+                    <div class="section-title">Step 3 — Adaptive Verification Verdict</div>
+                    
+                    <div id="verdict-container">
+                        <!-- Final Verdict Card (populated by JS) -->
+                    </div>
+
+                    <div class="section-title">Diagnostic Evidence Chain</div>
+                    
+                    <!-- Original Code vs Revised Code side-by-side -->
+                    <div class="diff-container">
+                        <div class="diff-pane">
+                            <div class="diff-header" style="color: var(--danger);">Original Code Submission</div>
+                            <div id="diff-code-original" class="diff-code"></div>
+                        </div>
+                        <div class="diff-pane">
+                            <div class="diff-header" style="color: var(--success);">Revised Code Submission</div>
+                            <div id="diff-code-revised" class="diff-code"></div>
+                        </div>
+                    </div>
+
+                    <!-- Student Diagnosis & Feedback -->
+                    <div class="test-case-card" style="margin-top: 10px;">
+                        <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase;">Student Diagnostic Explanation</div>
+                        <div id="diff-explanation" style="font-size: 0.95rem; color: var(--text-primary); line-height: 1.5; padding: 12px; background-color: var(--bg-base); border-radius: var(--radius-sm); border: 1px solid var(--border-color);"></div>
+                        <div id="diff-feedback" style="margin-top: 10px; font-weight: 600; font-size: 0.85rem; padding: 10px; border-radius: var(--radius-sm);"></div>
+                    </div>
+
+                    <!-- Revised Test Results List -->
+                    <div class="test-results-container" style="margin-top: 10px;">
+                        <div class="section-title">Final Sandbox Verification</div>
+                        <div id="revised-results-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Revised test result rows -->
+                        </div>
+                    </div>
+
+                    <button class="btn-submit" style="background-color: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-primary); box-shadow: none;" onclick="resetWorkspace()">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M12 5V1L8 5l4 4V5zm-4 7a4 4 0 0 0 4 4c2.21 0 4-1.79 4-4h2c0 3.31-2.69 6-6 6a6 6 0 0 1-6-6h2z"/></svg>
+                        Start New Debugging Session
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts for dynamic interaction -->
+    <script>
+        let currentProblem = null;
+        let currentRun = null;
+
+        // On document load
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchProblem();
+            fetchHistory();
+        });
+
+        function updateStudentID(val) {
+            localStorage.setItem("bugstriker_student_id", val);
+        }
+
+        // Load saved student ID on startup
+        const savedStudent = localStorage.getItem("bugstriker_student_id");
+        if (savedStudent) {
+            document.getElementById("student-id").value = savedStudent;
+        }
+
+        function fetchProblem() {
+            fetch("/api/problem")
+                .then(res => res.json())
+                .then(data => {
+                    currentProblem = data;
+                    document.getElementById("problem-title").innerText = data.title;
+                    document.getElementById("problem-description").innerText = data.description;
+                    
+                    const container = document.getElementById("test-cases-container");
+                    container.innerHTML = "";
+                    data.test_cases.forEach(tc => {
+                        const tcDiv = document.createElement("div");
+                        tcDiv.className = "test-case-card";
+                        tcDiv.innerHTML = `
+                            <div style="font-weight: 700; color: var(--brand-primary); font-size: 0.85rem;">${tc.name.replace(/_/g, " ").toUpperCase()}</div>
+                            <div class="test-case-row">
+                                <div class="test-case-label">Input List:</div>
+                                <div class="test-case-value">${tc.input}</div>
+                            </div>
+                            <div class="test-case-row">
+                                <div class="test-case-label">Expected:</div>
+                                <div class="test-case-value">${tc.expected}</div>
+                            </div>
+                        `;
+                        container.appendChild(tcDiv);
+                    });
+                })
+                .catch(err => console.error("Error fetching problem:", err));
+        }
+
+        function fetchHistory() {
+            fetch("/api/runs")
+                .then(res => res.json())
+                .then(runs => {
+                    const container = document.getElementById("runs-container");
+                    if (runs.length === 0) {
+                        container.innerHTML = `
+                            <div class="history-item" style="cursor: default; text-align: center; color: var(--text-muted); border: 1px dashed var(--border-color);">
+                                No evaluation history
+                            </div>
+                        `;
+                        return;
+                    }
+                    container.innerHTML = "";
+                    runs.forEach(run => {
+                        const item = document.createElement("div");
+                        item.className = `history-item ${currentRun && currentRun.run_id === run.run_id ? 'active' : ''}`;
+                        item.onclick = () => loadRun(run.run_id);
+                        
+                        let badgeClass = "finished";
+                        let statusText = "Finished";
+                        
+                        if (run.status === "WAITING_FOR_STUDENT") {
+                            badgeClass = "waiting";
+                            statusText = "Awaiting Revision";
+                        } else if (run.status === "FINISHED") {
+                            badgeClass = "verified";
+                            statusText = "Verified";
+                        }
+                        
+                        item.innerHTML = `
+                            <div class="student">
+                                <span>👤 ${run.student_id}</span>
+                                <span class="status-badge ${badgeClass}">${statusText}</span>
+                            </div>
+                            <div class="meta">
+                                <span>Score: ${run.score}/${run.total} Passed</span>
+                                <span>ID: ${run.run_id.slice(0, 8)}...</span>
+                            </div>
+                        `;
+                        container.appendChild(item);
+                    });
+                })
+                .catch(err => console.error("Error fetching runs list:", err));
+        }
+
+        function loadRun(runId) {
+            showView("view-loading");
+            document.getElementById("loading-title").innerText = "Resuming Session...";
+            document.getElementById("loading-subtitle").innerText = `Synchronizing persistent history and evidence logs for run ${runId.slice(0,8)}.`;
+            
+            setTimeout(() => {
+                fetch(`/api/run/${runId}`)
+                    .then(res => res.json())
+                    .then(run => {
+                        currentRun = run;
+                        document.getElementById("session-display-id").innerText = run.run_id.slice(0, 8);
+                        document.getElementById("student-id").value = run.student_id;
+                        
+                        if (run.status === "WAITING_FOR_STUDENT") {
+                            displayProbeView(run);
+                        } else if (run.status === "FINISHED") {
+                            displayFinishedView(run);
+                        }
+                        fetchHistory();
+                    })
+                    .catch(err => {
+                        console.error("Error loading run:", err);
+                        resetWorkspace();
+                    });
+            }, 600);
+        }
+
+        function showView(viewId) {
+            document.querySelectorAll(".state-view").forEach(v => v.classList.remove("active"));
+            document.getElementById(viewId).classList.add("active");
+        }
+
+        function submitInitialCode() {
+            const studentId = document.getElementById("student-id").value;
+            const code = document.getElementById("code-submit").value;
+            
+            showView("view-loading");
+            document.getElementById("loading-title").innerText = "Executing Sandbox Tests...";
+            document.getElementById("loading-subtitle").innerText = "Compiling source AST and executing in isolated subprocess context...";
+            
+            setTimeout(() => {
+                fetch("/api/submit", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ student_id: studentId, code: code })
+                })
+                .then(res => res.json())
+                .then(run => {
+                    currentRun = run;
+                    document.getElementById("session-display-id").innerText = run.run_id.slice(0, 8);
+                    
+                    if (run.status === "FINISHED") {
+                        // All tests passed directly on first try
+                        displayFinishedView(run);
+                    } else {
+                        // Failed cases found, awaiting student diagnostic response
+                        displayProbeView(run);
+                    }
+                    fetchHistory();
+                })
+                .catch(err => {
+                    console.error("Error submitting code:", err);
+                    alert("Execution failed. See console logs.");
+                    showView("view-submit");
+                });
+            }, 1000);
+        }
+
+        function displayProbeView(run) {
+            showView("view-probe");
+            
+            // Build original test results HTML
+            const resultsList = document.getElementById("original-results-list");
+            resultsList.innerHTML = "";
+            
+            run.original_test_results.forEach(tc => {
+                const isFailedTarget = run.selected_failure && tc.test_name === run.selected_failure.test_name;
+                const row = document.createElement("div");
+                row.className = `test-result-row ${tc.passed ? 'passed' : 'failed'}`;
+                if (isFailedTarget) {
+                    row.style.border = "2px solid var(--danger)";
+                    row.style.backgroundColor = "rgba(239, 68, 68, 0.04)";
+                }
+                
+                row.innerHTML = `
+                    <div class="test-result-info">
+                        <span class="result-pill ${tc.passed ? 'pass' : 'fail'}">${tc.passed ? 'pass' : 'fail'}</span>
+                        <div style="font-weight: 700; font-size: 0.85rem;">
+                            ${tc.test_name.replace(/_/g, " ").toUpperCase()}
+                            ${isFailedTarget ? '<span style="color: var(--danger); font-size: 0.75rem; margin-left: 8px; font-weight: 800;">[🎯 PROBING ISSUE]</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="test-result-details">
+                        Input: <code style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-primary);">${tc.input}</code> | 
+                        Returned: <code style="font-family: var(--font-mono); font-size: 0.75rem; color: ${tc.passed ? 'var(--success)' : 'var(--danger)'};">${tc.actual}</code> | 
+                        Expected: <code style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary);">${tc.expected}</code>
+                    </div>
+                `;
+                resultsList.appendChild(row);
+            });
+            
+            // Populate probe question
+            document.getElementById("probe-question-text").innerText = run.question;
+            
+            // Populate revised editor with original code
+            document.getElementById("code-revised").value = run.original_code;
+            document.getElementById("student-explanation").value = "";
+        }
+
+        function submitRevision() {
+            const answer = document.getElementById("student-explanation").value.strip ? document.getElementById("student-explanation").value.strip() : document.getElementById("student-explanation").value.trim();
+            const revisedCode = document.getElementById("code-revised").value;
+            
+            if (!answer) {
+                alert("Please write down your diagnostic explanation. It is required to evaluate your understanding of the bug.");
+                return;
+            }
+            if (!revisedCode) {
+                alert("Please provide your revised code solution.");
+                return;
+            }
+            
+            showView("view-loading");
+            document.getElementById("loading-title").innerText = "Evaluating Revision & Diagnosis...";
+            document.getElementById("loading-subtitle").innerText = "Analyzing diagnostic keywords and re-running test harness against updated file AST...";
+            
+            setTimeout(() => {
+                fetch("/api/answer", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        run_id: currentRun.run_id,
+                        answer: answer,
+                        revised_code: revisedCode
+                    })
+                })
+                .then(res => res.json())
+                .then(run => {
+                    currentRun = run;
+                    displayFinishedView(run);
+                    fetchHistory();
+                })
+                .catch(err => {
+                    console.error("Error submitting revision:", err);
+                    alert("Failed to submit revision.");
+                    showView("view-probe");
+                });
+            }, 1200);
+        }
+
+        function displayFinishedView(run) {
+            showView("view-finished");
+            
+            // Populate comparison diffs
+            document.getElementById("diff-code-original").textContent = run.original_code;
+            document.getElementById("diff-code-revised").textContent = run.revised_code;
+            
+            // Explanation summary
+            document.getElementById("diff-explanation").textContent = run.student_answer || "(No explanation submitted - Passed on first attempt)";
+            
+            const feedbackBox = document.getElementById("diff-feedback");
+            if (run.answer_evaluation) {
+                feedbackBox.style.display = "block";
+                feedbackBox.textContent = run.answer_evaluation.feedback;
+                if (run.answer_evaluation.passed) {
+                    feedbackBox.style.backgroundColor = "var(--success-glow)";
+                    feedbackBox.style.color = "var(--success)";
+                    feedbackBox.style.border = "1px solid rgba(16, 185, 129, 0.2)";
+                } else {
+                    feedbackBox.style.backgroundColor = "var(--warning-glow)";
+                    feedbackBox.style.color = "var(--warning)";
+                    feedbackBox.style.border = "1px solid rgba(245, 158, 11, 0.2)";
+                }
+            } else {
+                feedbackBox.style.display = "none";
+            }
+            
+            // Populate revised test results list
+            const revisedResultsList = document.getElementById("revised-results-list");
+            revisedResultsList.innerHTML = "";
+            run.revised_test_results.forEach(tc => {
+                const row = document.createElement("div");
+                row.className = `test-result-row ${tc.passed ? 'passed' : 'failed'}`;
+                row.innerHTML = `
+                    <div class="test-result-info">
+                        <span class="result-pill ${tc.passed ? 'pass' : 'fail'}">${tc.passed ? 'pass' : 'fail'}</span>
+                        <div style="font-weight: 700; font-size: 0.85rem;">${tc.test_name.replace(/_/g, " ").toUpperCase()}</div>
+                    </div>
+                    <div class="test-result-details">
+                        Input: <code style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-primary);">${tc.input}</code> | 
+                        Returned: <code style="font-family: var(--font-mono); font-size: 0.75rem; color: ${tc.passed ? 'var(--success)' : 'var(--danger)'};">${tc.actual}</code> | 
+                        Expected: <code style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary);">${tc.expected}</code>
+                    </div>
+                `;
+                revisedResultsList.appendChild(row);
+            });
+            
+            // Populate Scorecard
+            const evalData = run.final_evaluation;
+            const container = document.getElementById("verdict-container");
+            
+            let statusClass = "warning";
+            let statusText = evalData.status;
+            let iconSvg = `<svg class="icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+            
+            if (evalData.status === "BUGSTRIKER VERIFIED") {
+                statusClass = "verified";
+                iconSvg = `<svg class="icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+            } else if (evalData.status === "FINISHED" && evalData.confidence === "Low") {
+                statusClass = "warning";
+            } else {
+                statusClass = "failed";
+                iconSvg = `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+            }
+            
+            container.innerHTML = `
+                <div class="verdict-card">
+                    <div class="verdict-header">
+                        <div class="verdict-status-container">
+                            <div class="verdict-badge ${statusClass}">
+                                ${iconSvg}
+                                ${statusText}
+                            </div>
+                            <div class="verdict-confidence">
+                                Understanding Confidence: <span>${evalData.confidence}</span>
+                            </div>
+                        </div>
+                        <div class="verdict-score">
+                            ${evalData.passed_tests}<span>/${evalData.total_tests}</span>
+                        </div>
+                    </div>
+                    <div class="verdict-details">
+                        ${evalData.diagnosis}
+                    </div>
+                </div>
+            `;
+        }
+
+        function resetWorkspace() {
+            currentRun = null;
+            document.getElementById("session-display-id").innerText = "None";
+            document.getElementById("code-submit").value = "def second_largest(a):\n    a.sort()\n    return a[-2]";
+            showView("view-submit");
+            fetchHistory();
+        }
+
+        function resetAllHistory() {
+            if (confirm("Are you sure you want to clear all history runs? This cannot be undone.")) {
+                fetch("/api/reset", { method: "POST" })
+                    .then(res => res.json())
+                    .then(data => {
+                        resetWorkspace();
+                    })
+                    .catch(err => console.error("Error resetting:", err));
+            }
+        }
+    </script>
+</body>
+</html>
